@@ -38,7 +38,7 @@ model Task {
   completedAt DateTime?
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  updates     TaskUpdate[]
+  updates     TaskUpdate[] 
 
   @@index([userId, status])
   @@index([userId, updatedAt])

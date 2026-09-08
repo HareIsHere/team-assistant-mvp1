@@ -1,9 +1,9 @@
 import { prisma } from "../../lib/prisma.js";
 
-export async function findOrCreateUser(whatsappId: string, name?: string) {
+export async function findOrCreateUser(telegramId: string, name?: string) {
   return prisma.user.upsert({
-    where: { whatsappId },
+    where: { telegramId },
     update: name ? { name } : {},
-    create: { whatsappId, name }
+    create: { telegramId, name }
   });
 }
