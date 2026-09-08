@@ -1,37 +1,53 @@
 # Team Assistant — MVP 1
 
-A privacy-first WhatsApp task assistant. The MVP processes only messages sent to the bot's WhatsApp number; it does not read a team's general chat.
+A privacy-first Telegram task assistant. The MVP processes only messages sent directly to the bot; it does not read a team's general chat.
 
 ## What is included
 
-- User auto-registration by WhatsApp ID
+- User auto-registration by Telegram user ID
 - Create a task
 - List active tasks
 - View latest task
 - Update progress
 - Block latest task with a reason
 - Complete latest task
-- WhatsApp Cloud API webhook
-- Webhook verification
-- Optional X-Hub-Signature-256 validation
+- Telegram Bot API webhook endpoint
+- Optional Telegram webhook secret validation
 - PostgreSQL + Prisma
 - Local Docker PostgreSQL
-- Mock WhatsApp mode when API credentials are absent
+- Telegram mock mode when the bot token is absent
 
 ## Requirements
 
 - Node.js 20.19+ (Node 24 is also fine)
 - npm
 - Docker Desktop, if you want local PostgreSQL
-- A Meta WhatsApp Business Platform setup for real WhatsApp testing
+- A Telegram bot token from @BotFather
 
-## 1. Install
+## 1. Create the Telegram bot
+
+In Telegram, open `@BotFather` and run:
+
+```text
+/start
+/newbot
+```
+
+Choose a bot name and username. BotFather will give you:
+
+```text
+TELEGRAM_BOT_TOKEN
+```
+
+Keep the token secret.
+
+## 2. Install
 
 ```bash
 npm install
 ```
 
-## 2. Start PostgreSQL
+## 3. Start PostgreSQL
 
 ```bash
 docker compose up -d
@@ -43,7 +59,7 @@ Check:
 npm run test
 ```
 
-## 3. Environment
+## 4. Environment
 
 Copy `.env.example` to `.env`.
 
@@ -57,9 +73,15 @@ Windows PowerShell:
 Copy-Item .env.example .env
 ```
 
+Set:
+
+```text
+TELEGRAM_BOT_TOKEN=your-token-from-botfather
+```
+
 For local database, the default `DATABASE_URL` works with the supplied Docker Compose file.
 
-## 4. Create the database schema
+## 5. Create the database schema
 
 ```bash
 npx prisma migrate dev --name init
@@ -77,7 +99,7 @@ Open Prisma Studio if desired:
 npm run db:studio
 ```
 
-## 5. Run the server
+## 6. Run the server
 
 ```bash
 npm run dev
@@ -85,14 +107,26 @@ npm run dev
 
 Check:
 
-- http://localhost:3000/
-- http://localhost:3000/health
+- `http://localhost:3000/`
+- `http://localhost:3000/health`
 
-## 6. Test without WhatsApp
+## Telegram webhook
 
-When `WHATSAPP_ACCESS_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` are empty, outgoing messages are printed to the terminal instead of sent to Meta.
+The production endpoint is:
 
-The easiest first test is to create a small HTTP test payload against the webhook, or later connect a Meta test number.
+```text
+https://YOUR-DOMAIN/webhooks/telegram
+```
+
+Configure this URL with Telegram's `setWebhook` method. If `TELEGRAM_WEBHOOK_SECRET` is configured, send the same value as Telegram's `secret_token` when registering the webhook.
+
+Example:
+
+```text
+https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://YOUR-DOMAIN/webhooks/telegram&secret_token=YOUR_SECRET
+```
+
+For local development, a public HTTPS tunnel can be used.
 
 ## Supported commands
 
@@ -109,37 +143,25 @@ help
 
 The command parser intentionally stays simple in MVP 1. Natural-language AI comes later.
 
-## WhatsApp Cloud API setup
+## Security
 
-1. Create/use a Meta developer app with WhatsApp Business Platform.
-2. Obtain the phone number ID, access token, and app secret.
-3. Put them into `.env`.
-4. Deploy the server to a public HTTPS URL, or use a tunnel during development.
-5. Configure the WhatsApp webhook callback URL:
+For an MVP pilot, populate:
 
 ```text
-https://YOUR-DOMAIN/webhooks/whatsapp
+ALLOWED_TELEGRAM_IDS=123456789
 ```
 
-6. Set the verify token to exactly the same value as `WHATSAPP_VERIFY_TOKEN`.
-7. Subscribe to the WhatsApp `messages` webhook field.
+This prevents unknown Telegram accounts from using the bot.
 
-The server implements Meta's GET verification flow and POST message handling. It also validates `X-Hub-Signature-256` when `WHATSAPP_APP_SECRET` is configured.
+For production, also:
 
-## Important privacy design
-
-The bot is not designed to read a Community's general conversation. It stores only task-management data that is sent to the bot or created by the bot.
-
-## Production hardening before real company use
-
-- Use a secrets manager instead of plain `.env` on the server.
-- Require `WHATSAPP_APP_SECRET` and signature validation.
-- Keep `ALLOWED_WHATSAPP_IDS` populated during pilot testing.
-- Add authentication and role-based access for a future dashboard.
-- Add rate limiting and structured audit logs.
-- Add idempotency for incoming WhatsApp message IDs before enabling high-volume traffic.
-- Add a queue for outbound messages when volume grows.
-- Add automated database backups.
+- keep secrets only in Railway Variables or another secret manager
+- use `TELEGRAM_WEBHOOK_SECRET`
+- keep the allowlist populated during pilot testing
+- add rate limiting
+- add structured audit logs
+- add idempotency for Telegram update IDs
+- add automated database backups
 
 ## Next phase: MVP 2
 

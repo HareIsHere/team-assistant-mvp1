@@ -1,47 +1,29 @@
 import express from "express";
-import crypto from "node:crypto";
 import { env } from "./config/env.js";
 import { prisma } from "./lib/prisma.js";
-import { receiveWebhook, verifyWebhook } from "./modules/whatsapp/webhook.controller.js";
+import { receiveUpdate, verifyTelegramWebhook } from "./modules/telegram/webhook.controller.js";
 
 const app = express();
-app.use(express.json({
-  limit: "1mb",
-  verify: (req, _res, buf) => {
-    (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
-  }
-}));
-
-app.use("/webhooks/whatsapp", (req, res, next) => {
-  if (req.method !== "POST" || !env.WHATSAPP_APP_SECRET) return next();
-  const signature = req.header("x-hub-signature-256");
-  const rawBody = (req as express.Request & { rawBody?: Buffer }).rawBody;
-  if (!signature || !rawBody) return res.sendStatus(401);
-  const expected = `sha256=${crypto.createHmac("sha256", env.WHATSAPP_APP_SECRET).update(rawBody).digest("hex")}`;
-  const a = Buffer.from(signature);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.sendStatus(401);
-  next();
-});
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/", (_req, res) => {
-  res.json({ name: "Team Assistant MVP 1", status: "ok" });
+  res.json({ name: "Team Assistant MVP 1", status: "ok", channel: "telegram" });
 });
 
 app.get("/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ ok: true, database: "ok" });
+    res.json({ ok: true, database: "ok", channel: "telegram" });
   } catch {
     res.status(503).json({ ok: false, database: "error" });
   }
 });
 
-app.get("/webhooks/whatsapp", verifyWebhook);
-app.post("/webhooks/whatsapp", receiveWebhook);
+app.get("/webhooks/telegram", verifyTelegramWebhook);
+app.post("/webhooks/telegram", receiveUpdate);
 
 const server = app.listen(env.PORT, () => {
-  console.log(`Team Assistant running on http://localhost:${env.PORT}`);
+  console.log(`Team Assistant running on port ${env.PORT}`);
 });
 
 async function shutdown() {

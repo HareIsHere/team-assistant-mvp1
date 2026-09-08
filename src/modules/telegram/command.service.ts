@@ -1,5 +1,5 @@
 import { createTask, getLatestTask, listActiveTasks, updateProgress, blockTask, completeTask } from "../tasks/task.service.js";
-import { helpText } from "./whatsapp.service.js";
+import { helpText } from "./telegram.service.js";
 
 function parseCommand(text: string) {
   const trimmed = text.trim();
